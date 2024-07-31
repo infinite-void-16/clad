@@ -1383,7 +1383,7 @@ StmtDiff BaseForwardModeVisitor::VisitUnaryOperator(const UnaryOperator* UnOp) {
   } else if (opKind == UnaryOperatorKind::UO_LNot) {
     return StmtDiff(op, diff.getExpr_dx());
   } else {
-    unsupportedOpWarn(UnOp->getEndLoc());
+    unsupportedOpWarn(UnOp->getOperatorLoc());
     auto zero =
         ConstantFolder::synthesizeLiteral(m_Context.IntTy, m_Context, 0);
     return StmtDiff(op, zero);
@@ -1518,7 +1518,7 @@ BaseForwardModeVisitor::VisitBinaryOperator(const BinaryOperator* BinOp) {
     return StmtDiff(opDiff, nullptr);
   } else {
     // FIXME: add support for other binary operators
-    unsupportedOpWarn(BinOp->getEndLoc());
+    unsupportedOpWarn(BinOp->getOperatorLoc());
     opDiff = ConstantFolder::synthesizeLiteral(m_Context.IntTy, m_Context, 0);
   }
   if (opDiff)
