@@ -229,6 +229,8 @@ namespace clad {
 
           // if enabled, print source code of the derived functions
           if (m_DO.DumpDerivedFn) {
+            if (OverloadedDerivativeDecl)
+              OverloadedDerivativeDecl->print(llvm::outs(), Policy);
             DerivativeDecl->print(llvm::outs(), Policy);
             if (request.DeclarationOnly)
               llvm::outs() << ";\n";
@@ -382,7 +384,7 @@ namespace clad {
       DeclarationName Name = &C.Idents.get("clad");
       Sema &SemaR = m_CI.getSema();
       LookupResult R(SemaR, Name, SourceLocation(), Sema::LookupNamespaceName,
-                     Sema::ForVisibleRedeclaration);
+                     RedeclarationKind::ForVisibleRedeclaration);
       SemaR.LookupQualifiedName(R, C.getTranslationUnitDecl(),
                                 /*allowBuiltinCreation*/ false);
       m_HasRuntime = !R.empty();

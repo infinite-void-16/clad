@@ -207,7 +207,7 @@ public:
     void CompleteTentativeDefinition(clang::VarDecl* D) override {
       AppendDelayed({CallKind::CompleteTentativeDefinition, D});
     }
-#if CLANG_VERSION_MAJOR > 9
+#if CLANG_VERSION_MAJOR > 9 && CLANG_VERSION_MAJOR < 19
     void CompleteExternalDeclaration(clang::VarDecl* D) override {
       AppendDelayed({CallKind::CompleteExternalDeclaration, D});
     }

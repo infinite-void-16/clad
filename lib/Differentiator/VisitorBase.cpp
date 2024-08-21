@@ -22,10 +22,12 @@
 #include "clang/Sema/Overload.h"
 #include "clang/Sema/Scope.h"
 #include "clang/Sema/Sema.h"
+#include "clang/Sema/SemaCUDA.h"
 #include "clang/Sema/SemaInternal.h"
 #include "clang/Sema/Template.h"
 
 #include <algorithm>
+#include <clang/AST/DeclTemplate.h>
 #include <numeric>
 
 #include "clad/Differentiator/Compatibility.h"
@@ -161,7 +163,7 @@ namespace clad {
     // From Sema::ActOnStartNamespaceDef:
     if (II) {
       LookupResult R(m_Sema, II, noLoc, Sema::LookupOrdinaryName,
-                     Sema::ForVisibleRedeclaration);
+                     RedeclarationKind::ForVisibleRedeclaration);
       m_Sema.LookupQualifiedName(R, m_Sema.CurContext->getRedeclContext());
       NamedDecl* FoundDecl =
           R.isSingleResult() ? R.getRepresentativeDecl() : nullptr;
@@ -425,7 +427,7 @@ namespace clad {
       return Result;
     DeclarationName CladName = &m_Context.Idents.get("clad");
     LookupResult CladR(m_Sema, CladName, noLoc, Sema::LookupNamespaceName,
-                       Sema::ForVisibleRedeclaration);
+                       RedeclarationKind::ForVisibleRedeclaration);
     m_Sema.LookupQualifiedName(CladR, m_Context.getTranslationUnitDecl());
     assert(!CladR.empty() && "cannot find clad namespace");
     Result = cast<NamespaceDecl>(CladR.getFoundDecl());
@@ -439,7 +441,7 @@ namespace clad {
     CSS.Extend(m_Context, CladNS, noLoc, noLoc);
     DeclarationName TapeName = &m_Context.Idents.get(ClassName);
     LookupResult TapeR(m_Sema, TapeName, noLoc, Sema::LookupUsingDeclName,
-                       Sema::ForVisibleRedeclaration);
+                       RedeclarationKind::ForVisibleRedeclaration);
     m_Sema.LookupQualifiedName(TapeR, CladNS, CSS);
     assert(!TapeR.empty() && isa<TemplateDecl>(TapeR.getFoundDecl()) &&
            "cannot find clad::tape");
@@ -617,13 +619,31 @@ namespace clad {
       call = BuildCallExprToMemFn(derMethod, argExprs, useRefQualifiedThisObj);
     } else {
       Expr* exprFunc = BuildDeclRef(FD, SS);
+      Expr* configExpr = nullptr;
+      if (FD->hasAttr<CUDAGlobalAttr>()) {
+        llvm::APInt one(/*numBits=*/32, /*value=*/1);
+        Expr* gridSize =
+            IntegerLiteral::Create(m_Context, one, m_Context.IntTy, noLoc);
+        Expr* blockSize =
+            IntegerLiteral::Create(m_Context, one, m_Context.IntTy, noLoc);
+        llvm::SmallVector<Expr*, 2> config{gridSize, blockSize};
+
+        configExpr =
+            m_Sema.CUDA()
+                .ActOnExecConfigExpr(
+                    getCurrentScope(), /*LParenLoc=*/noLoc,
+                    /*config array*/ llvm::MutableArrayRef<Expr*>(config),
+                    /*GGGLoc=*/noLoc)
+                .get();
+      }
       call = m_Sema
                  .ActOnCallExpr(
                      getCurrentScope(),
                      /*Fn=*/exprFunc,
                      /*LParenLoc=*/noLoc,
                      /*ArgExprs=*/llvm::MutableArrayRef<Expr*>(argExprs),
-                     /*RParenLoc=*/m_DiffReq->getLocation())
+                     /*RParenLoc=*/m_DiffReq->getLocation(),
+                     /*ExecConfig=*/configExpr)
                  .get();
     }
     return call;
@@ -646,8 +666,8 @@ namespace clad {
     // FIXME: currently this doesn't print func<templates>(args...) while
     // dumping and only prints func(args...), we need to fix this.
     auto* FTD = dyn_cast<FunctionTemplateDecl>(R.getRepresentativeDecl());
-    clang::TemplateArgumentList TL(TemplateArgumentList::OnStack, templateArgs);
-    FunctionDecl* FD = m_Sema.InstantiateFunctionDeclaration(FTD, &TL, loc);
+    clang::TemplateArgumentList *TL = TemplateArgumentList::CreateCopy(m_Context, templateArgs);
+    FunctionDecl* FD = m_Sema.InstantiateFunctionDeclaration(FTD, TL, loc);
 
     return BuildCallExprToFunction(FD, argExprs, false, &CSS);
   }

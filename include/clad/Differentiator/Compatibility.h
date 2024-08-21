@@ -541,7 +541,7 @@ static inline MemberExpr* BuildMemberExpr(
                             member, foundDecl, memberNameInfo, templateArgs, ty,
                             VK, OK);
 }
-#else
+#elif CLANG_VERSION_MAJOR < 19
 static inline MemberExpr* BuildMemberExpr(
     Sema& semaRef, Expr* base, bool isArrow, SourceLocation opLoc,
     const CXXScopeSpec* SS, SourceLocation templateKWLoc, ValueDecl* member,
@@ -549,6 +549,19 @@ static inline MemberExpr* BuildMemberExpr(
     const DeclarationNameInfo& memberNameInfo, QualType ty, ExprValueKind VK,
     ExprObjectKind OK, const TemplateArgumentListInfo* templateArgs = nullptr) {
   return semaRef.BuildMemberExpr(base, isArrow, opLoc, SS, templateKWLoc,
+                                 member, foundDecl, hadMultipleCandidates,
+                                 memberNameInfo, ty, VK, OK, templateArgs);
+}
+#else
+static inline MemberExpr* BuildMemberExpr(
+    Sema& semaRef, Expr* base, bool isArrow, SourceLocation opLoc,
+    const CXXScopeSpec* SS, SourceLocation templateKWLoc, ValueDecl* member,
+    DeclAccessPair foundDecl, bool hadMultipleCandidates,
+    const DeclarationNameInfo& memberNameInfo, QualType ty, ExprValueKind VK,
+    ExprObjectKind OK, const TemplateArgumentListInfo* templateArgs = nullptr) {
+  auto &C = semaRef.getASTContext();
+  auto NNSLoc = SS->getWithLocInContext(C);
+  return semaRef.BuildMemberExpr(base, isArrow, opLoc, NNSLoc, templateKWLoc,
                                  member, foundDecl, hadMultipleCandidates,
                                  memberNameInfo, ty, VK, OK, templateArgs);
 }

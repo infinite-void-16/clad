@@ -362,8 +362,10 @@ Expr* getArraySizeExpr(const ArrayType* AT, ASTContext& context,
       // Set m_Derivative for creating the overload.
       m_Derivative = customDerivative;
       FunctionDecl* gradientOverloadFD = nullptr;
-      if (shouldCreateOverload)
+      if (shouldCreateOverload) {
         gradientOverloadFD = CreateGradientOverload();
+        gradientOverloadFD->dumpColor();
+      }
       return DerivativeAndOverload{customDerivative, gradientOverloadFD};
     }
 
@@ -466,6 +468,8 @@ Expr* getArraySizeExpr(const ArrayType* AT, ASTContext& context,
     if (shouldCreateOverload) {
       gradientOverloadFD =
           CreateGradientOverload();
+      // gradientOverloadFD->dropAttrs();
+      gradientOverloadFD->dumpColor();
     }
 
     return DerivativeAndOverload{result.first, gradientOverloadFD};

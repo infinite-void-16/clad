@@ -617,9 +617,9 @@ namespace clad {
     // TODO: why not check for its name? clad::differentiate/gradient?
     const AnnotateAttr* A = FD->getAttr<AnnotateAttr>();
     if (A &&
-        (A->getAnnotation().equals("D") || A->getAnnotation().equals("G") ||
-         A->getAnnotation().equals("H") || A->getAnnotation().equals("J") ||
-         A->getAnnotation().equals("E"))) {
+        (A->getAnnotation() == "D" || A->getAnnotation() == "G" ||
+         A->getAnnotation() == "H" || A->getAnnotation() == "J" ||
+         A->getAnnotation() == "E")) {
       // A call to clad::differentiate or clad::gradient was found.
       DeclRefExpr* DRE = getArgFunction(E, m_Sema);
       if (!DRE)
@@ -631,7 +631,7 @@ namespace clad {
       unsigned bitmasked_opts_value = 0;
       bool enable_tbr_in_req = false;
       bool disable_tbr_in_req = false;
-      if (!A->getAnnotation().equals("E") &&
+      if (!(A->getAnnotation() == "E") &&
           FD->getTemplateSpecializationArgs()) {
         const auto template_arg = FD->getTemplateSpecializationArgs()->get(0);
         if (template_arg.getKind() == TemplateArgument::Pack)
@@ -658,7 +658,7 @@ namespace clad {
           request.EnableTBRAnalysis = m_Options.EnableTBRAnalysis;
         }
         if (clad::HasOption(bitmasked_opts_value, clad::opts::diagonal_only)) {
-          if (!A->getAnnotation().equals("H")) {
+          if (!(A->getAnnotation() == "H")) {
             utils::EmitDiag(m_Sema, DiagnosticsEngine::Error, endLoc,
                             "Diagonal only option is only valid for Hessian "
                             "mode.");
@@ -667,7 +667,7 @@ namespace clad {
         }
       }
 
-      if (A->getAnnotation().equals("D")) {
+      if (A->getAnnotation() == "D") {
         request.Mode = DiffMode::forward;
         unsigned derivative_order =
             clad::GetDerivativeOrder(bitmasked_opts_value);
@@ -699,14 +699,14 @@ namespace clad {
             return true;
           }
         }
-      } else if (A->getAnnotation().equals("H")) {
+      } else if (A->getAnnotation() == "H") {
         if (clad::HasOption(bitmasked_opts_value, clad::opts::diagonal_only))
           request.Mode = DiffMode::hessian_diagonal;
         else
           request.Mode = DiffMode::hessian;
-      } else if (A->getAnnotation().equals("J")) {
+      } else if (A->getAnnotation() == "J") {
         request.Mode = DiffMode::jacobian;
-      } else if (A->getAnnotation().equals("G")) {
+      } else if (A->getAnnotation() == "G") {
         request.Mode = DiffMode::reverse;
         if (clad::HasOption(bitmasked_opts_value, clad::opts::use_enzyme))
           request.use_enzyme = true;
